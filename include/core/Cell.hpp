@@ -1,26 +1,56 @@
 #pragma once
 
-class Cell {
-private:
-    bool is_mine_ = false;
-    bool is_revealed_ = false;
-    bool is_flagged_ = false;
-    int count_neighbor_mines_ = 0;
+#include <cstdint>
 
-public:
-    bool isMine() const { return is_mine_; };
-    bool isRevealed() const { return is_revealed_; }
-    bool isFlagged() const { return is_flagged_; }
-    int getCountNeighborMines() const { return count_neighbor_mines_; }
+namespace minesweeper {
 
-    void setMine(bool mine) { is_mine_ = mine; }
-    void reveal() { is_revealed_ = true; }
-    void hide() { is_revealed_ = false; }
-    void toggleFlag() { is_flagged_ = !is_flagged_; }
-    void setCountNeighborMines(int count) { count_neighbor_mines_ = count; }
-    void addNeighborMine() { count_neighbor_mines_++; }
+    class Cell {
+    private:
+        enum BitMask : uint8_t {
+            MINE_BIT = 0x01,
+            REVEALED_BIT = 0x02,
+            FLAGGED_BIT = 0x04,
+            NEIGHBORS_MASK = 0xF8
+        };
 
-    bool isValid() const {
-        return !(is_revealed_ && is_flagged_);
-    }
-};
+        uint8_t data_;
+
+        void setBit(BitMask mask, bool value) {
+            data_ = value ? (data_ | mask) : (data_ & ~mask);
+        }
+
+        bool checkBit(BitMask mask) const {
+            return data_ & mask;
+        }
+
+    public:
+        Cell() : data_(0) {}
+
+        bool isMine() const { return checkBit(MINE_BIT); }
+        bool isRevealed() const { return checkBit(REVEALED_BIT); }
+        bool isFlagged() const { return checkBit(FLAGGED_BIT); }
+        uint8_t neighborMines() const { return data_ >> 3; }
+
+        void setMine(bool mine) { setBit(MINE_BIT, mine); }
+        void setRevealed(bool revealed) { setBit(REVEALED_BIT, revealed); }
+        void setFlagged(bool flagged) { setBit(FLAGGED_BIT, flagged); }
+        void setNeighborMines(uint8_t count) { data_ = (data_ & ~NEIGHBORS_MASK) | ((count & 0x1F) << 3); }
+
+        void incrementNeighborMines() {
+            if (neighborMines() < 8) {
+                setNeighborMines(neighborMines() + 1);
+            }
+        }
+
+        void decrementNeighborMines() {
+            if (neighborMines() > 0) {
+                setNeighborMines(neighborMines() - 1);
+            }
+        }
+
+        bool isValidState() const {
+            return !(isRevealed() && isFlagged());
+        }
+    };
+
+}  // namespace minesweeper
